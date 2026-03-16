@@ -507,8 +507,26 @@ function isGroupBlocked(id) {
 function onStandClick(id){
   const s=stands[id];
   if(adminMode){
+    // Admin: si esta vendido mostrar dialogo de liberacion
+    if(s.status==='sold'){
+      showReleaseModal(id);
+      return;
+    }
+    // Admin: si esta reservado, liberar
+    if(s.status==='reserved'){
+      const groupIds=getGroupIds(id);
+      groupIds.forEach(k=>{
+        stands[k].status='available';
+        delete stands[k].reservedAt;
+        delete stands[k].afiliado;
+        delete stands[k].confirmCode;
+        delete stands[k].confirmDate;
+      });
+      render();
+      bulkSaveToSheet(groupIds);
+      return;
+    }
     // Admin: bloquear/desbloquear todo el grupo
-    if(s.status==='sold'||s.status==='reserved') return;
     const newStatus = s.status==='blocked' ? 'available' : 'blocked';
     getGroupIds(id).forEach(k => {
       if(stands[k].status !== 'sold' && stands[k].status !== 'reserved')
@@ -522,6 +540,67 @@ function onStandClick(id){
   selected=id;
   render();
   showModal(id);
+}
+
+// Modal de confirmacion para liberar un espacio vendido
+function showReleaseModal(id){
+  const s=stands[id];
+  const groupIds=getGroupIds(id);
+  const afl=s.afiliado;
+  const isBlock=groupIds.length>1;
+  const standLabel=isBlock?`${s.grupo} (${groupIds.length} stands)`:`Stand ${id}`;
+
+  document.getElementById('modal-root').innerHTML=`
+  <div class="overlay" id="ov-rel">
+    <div class="modal" style="width:380px">
+      <div class="modal-head" style="background:#8a2020">
+        <h2>Liberar espacio vendido</h2>
+        <div class="sub">${standLabel} · ${s.cat}</div>
+      </div>
+      <div class="modal-body">
+        <div style="background:#2a1010;border:1px solid #6a2020;border-radius:8px;padding:12px 14px;margin-bottom:14px">
+          <div style="font-size:11px;color:#c06060;margin-bottom:8px;font-weight:600">DATOS DEL AFILIADO ACTUAL</div>
+          <div style="font-size:12px;color:#e0c0c0;margin-bottom:4px">Afiliado: <strong>${afl?.nom||'—'}</strong></div>
+          <div style="font-size:12px;color:#e0c0c0;margin-bottom:4px">Comercio: <strong>${afl?.com||'—'}</strong></div>
+          <div style="font-size:12px;color:#e0c0c0;margin-bottom:4px">Código: <strong>${afl?.cod||'—'}</strong></div>
+          <div style="font-size:12px;color:#e0c0c0">Confirmación: <strong style="font-family:monospace">${s.confirmCode||'—'}</strong></div>
+        </div>
+        <div style="background:#2a1a08;border:1px solid #8a5010;border-radius:8px;padding:10px 14px;font-size:12px;color:#c88040;margin-bottom:16px">
+          ⚠ Al liberar este espacio quedará disponible para ser comprado nuevamente. Esta acción no se puede deshacer.
+        </div>
+        <div style="font-size:12px;color:#888;margin-bottom:6px">Motivo de liberación (opcional)</div>
+        <input id="rel-motivo" type="text" placeholder="Ej: No completó el pago al 20 de junio" style="margin-bottom:0"/>
+        <div class="actions" style="margin-top:14px">
+          <button class="btn" onclick="document.getElementById('modal-root').innerHTML=''">Cancelar</button>
+          <button class="btn" style="background:#8a2020;color:#fff;border-color:#8a2020" onclick="releaseStand('${id}')">Liberar espacio</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('ov-rel').addEventListener('click',e=>{
+    if(e.target.id==='ov-rel') document.getElementById('modal-root').innerHTML='';
+  });
+}
+
+function releaseStand(id){
+  const groupIds=getGroupIds(id);
+  const motivo=document.getElementById('rel-motivo')?.value||'';
+  groupIds.forEach(k=>{
+    stands[k].status='available';
+    delete stands[k].reservedAt;
+    delete stands[k].afiliado;
+    delete stands[k].confirmCode;
+    delete stands[k].confirmDate;
+  });
+  document.getElementById('modal-root').innerHTML='';
+  render();
+  bulkSaveToSheet(groupIds);
+  // Notificacion breve
+  const notif=document.createElement('div');
+  notif.style.cssText='position:fixed;bottom:24px;right:24px;background:#2a5a20;color:#8acc78;border:1px solid #4a8a40;border-radius:8px;padding:12px 18px;font-size:13px;z-index:9999;font-family:system-ui,sans-serif';
+  notif.textContent='✓ Espacio liberado y disponible para venta';
+  document.body.appendChild(notif);
+  setTimeout(()=>notif.remove(),3500);
 }
 
 // ══════════════════════════════════════════════════
