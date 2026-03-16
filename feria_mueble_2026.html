@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Feria del Mueble Sarchí 2026</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -613,168 +613,150 @@ function closeModal(){
 }
 
 // ══════════════════════════════════════════════════
-// PDF GENERATION
+// PDF GENERATION — print-to-PDF, no external libs
 // ══════════════════════════════════════════════════
 function generatePDF(id){
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit:'mm', format:'a4' });
   const s=stands[id];
   const price=getPrice(s);
   const sched=paySchedule(price);
   const afl=s.afiliado;
-  const W=210, H=297;
+  const code=s.confirmCode||'---';
+  const fecha=s.confirmDate||new Date().toLocaleDateString('es-CR',{day:'2-digit',month:'long',year:'numeric'});
 
-  // ── Background ──
-  doc.setFillColor(20,18,15);
-  doc.rect(0,0,W,H,'F');
+  const schedRows=sched.map((p,i)=>`
+    <tr style="background:${i%2===0?'#f9f6f0':'#f2ede4'}">
+      <td style="padding:8px 12px;font-weight:600;color:#5a3a10">${p.label}</td>
+      <td style="padding:8px 12px;text-align:center;color:#3a6a28;font-weight:600">${p.pct}</td>
+      <td style="padding:8px 12px;text-align:right;font-family:monospace;font-weight:700;color:#2a5a20;font-size:14px">${formatCRC(p.amount)}</td>
+      <td style="padding:8px 12px;text-align:center;color:#6a5020">${p.date}</td>
+    </tr>`).join('');
 
-  // ── Header bar ──
-  doc.setFillColor(192,98,42);
-  doc.rect(0,0,W,38,'F');
+  const html=`<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Confirmacion ${id} - Feria del Mueble Sarchi 2026</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #fff; color: #1a1a1a; width: 210mm; min-height: 297mm; }
+  .page { width: 210mm; min-height: 297mm; padding: 0; display: flex; flex-direction: column; }
 
-  // ── Logo area text ──
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(22);
-  doc.setFont('helvetica','bold');
-  doc.text('FERIA DEL MUEBLE SARCHI 2026',W/2,16,{align:'center'});
-  doc.setFontSize(10);
-  doc.setFont('helvetica','normal');
-  doc.setTextColor(255,220,180);
-  doc.text('CACITUS · Camara de Comercio, Industria y Turismo de Sarchi',W/2,24,{align:'center'});
-  doc.text('Agosto 2026 · Campo Ferial',W/2,30,{align:'center'});
+  .header { background: #c0622a; padding: 28px 30px 22px; text-align: center; }
+  .header h1 { color: #fff; font-size: 22px; font-weight: 700; letter-spacing: 1px; margin-bottom: 6px; }
+  .header p  { color: rgba(255,255,255,0.8); font-size: 11px; margin-top: 3px; }
 
-  // ── Thank you message ──
-  doc.setFillColor(30,28,22);
-  doc.roundedRect(15,45,W-30,22,4,4,'F');
-  doc.setTextColor(200,160,80);
-  doc.setFontSize(13);
-  doc.setFont('helvetica','bold');
-  doc.text('GRACIAS POR RESERVAR SU ESPACIO',W/2,55,{align:'center'});
-  doc.setFontSize(10);
-  doc.setFont('helvetica','normal');
-  doc.setTextColor(160,130,70);
-  doc.text('en la Feria del Mueble Sarchi 2026 organizada por CACITUS',W/2,62,{align:'center'});
+  .body { padding: 24px 30px; flex: 1; }
 
-  // ── Confirmation code ──
-  doc.setFillColor(15,42,20);
-  doc.setDrawColor(42,106,52);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(15,72,W-30,16,3,3,'FD');
-  doc.setTextColor(106,184,122);
-  doc.setFontSize(9);
-  doc.setFont('helvetica','normal');
-  doc.text('CODIGO DE CONFIRMACION',W/2,78,{align:'center'});
-  doc.setFontSize(16);
-  doc.setFont('helvetica','bold');
-  doc.setTextColor(130,200,140);
-  doc.text(s.confirmCode||'---',W/2,86,{align:'center'});
+  .thanks-box { background: #fdf6ee; border: 2px solid #c0622a; border-radius: 8px; padding: 16px 20px; text-align: center; margin-bottom: 20px; }
+  .thanks-box h2 { color: #8a4010; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .thanks-box p  { color: #a06030; font-size: 12px; }
 
-  // ── Datos del afiliado ──
-  let y=96;
-  doc.setFillColor(25,22,18);
-  doc.setDrawColor(60,50,35);
-  doc.roundedRect(15,y,W-30,52,3,3,'FD');
+  .code-box { background: #f0f9f2; border: 2px solid #3a8a4a; border-radius: 8px; padding: 14px 20px; text-align: center; margin-bottom: 20px; }
+  .code-label { font-size: 10px; font-weight: 600; color: #4a8a54; letter-spacing: 2px; margin-bottom: 4px; }
+  .code-value { font-family: monospace; font-size: 26px; font-weight: 700; color: #2a6a38; letter-spacing: 4px; }
 
-  doc.setFontSize(10);
-  doc.setFont('helvetica','bold');
-  doc.setTextColor(200,130,50);
-  doc.text('DATOS DE CONFIRMACION',25,y+8);
+  .section { border: 1px solid #e0d8cc; border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+  .section-title { background: #f5ede0; padding: 9px 14px; font-size: 11px; font-weight: 700; color: #7a4a18; letter-spacing: 1px; border-bottom: 1px solid #e0d0b8; }
+  .data-grid { display: grid; grid-template-columns: 1fr 1fr; }
+  .data-cell { padding: 10px 14px; border-bottom: 1px solid #ede5d8; }
+  .data-cell:nth-child(odd) { border-right: 1px solid #ede5d8; background: #faf7f3; }
+  .data-cell .dl { font-size: 9px; font-weight: 600; color: #9a7a50; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .data-cell .dv { font-size: 13px; color: #2a2010; font-weight: 500; }
 
-  const rows=[
-    ['Nombre del afiliado:', afl?.nom||''],
-    ['Nombre del comercio:', afl?.com||''],
-    ['Numero de afiliado:',  afl?.cod||''],
-    ['Stand asignado:',      `${id} · ${s.grupo} · ${s.size}`],
-    ['Fecha de reserva:',    s.confirmDate||new Date().toLocaleDateString('es-CR')],
-  ];
-  doc.setFontSize(9.5);
-  let ry=y+16;
-  rows.forEach(([label,val])=>{
-    doc.setFont('helvetica','bold');
-    doc.setTextColor(150,120,60);
-    doc.text(label,25,ry);
-    doc.setFont('helvetica','normal');
-    doc.setTextColor(240,225,200);
-    doc.text(val,90,ry);
-    ry+=8;
-  });
+  .price-box { background: linear-gradient(135deg, #f0f9ec, #e8f5e0); border: 2px solid #4a8a30; border-radius: 8px; padding: 14px 20px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+  .price-label { font-size: 12px; font-weight: 600; color: #3a6a20; }
+  .price-value { font-family: monospace; font-size: 24px; font-weight: 700; color: #2a5a18; }
 
-  // ── Precio total ──
-  y=155;
-  doc.setFillColor(15,28,15);
-  doc.setDrawColor(42,100,42);
-  doc.roundedRect(15,y,W-30,14,3,3,'FD');
-  doc.setFontSize(10);
-  doc.setFont('helvetica','bold');
-  doc.setTextColor(160,220,120);
-  doc.text('MONTO TOTAL DEL ESPACIO:',25,y+9);
-  doc.setFontSize(14);
-  doc.setTextColor(130,210,100);
-  doc.text(formatCRC(price).replace('\u20a1','CRC '),W-20,y+9,{align:'right'});
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: #3a2a10; }
+  thead th { padding: 9px 12px; color: #f0d898; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-align: left; }
+  thead th:nth-child(2), thead th:nth-child(3) { text-align: center; }
 
-  // ── Plan de pagos ──
-  y=175;
-  doc.setFillColor(20,20,14);
-  doc.setDrawColor(50,50,25);
-  doc.roundedRect(15,y,W-30,58,3,3,'FD');
-  doc.setFontSize(10);
-  doc.setFont('helvetica','bold');
-  doc.setTextColor(180,180,60);
-  doc.text('PLAN DE PAGOS',25,y+9);
+  .warn-box { background: #fff8ec; border: 2px solid #c87820; border-radius: 8px; padding: 14px 18px; margin-top: 16px; }
+  .warn-title { font-size: 11px; font-weight: 700; color: #8a5010; margin-bottom: 6px; letter-spacing: 0.5px; }
+  .warn-text  { font-size: 11px; color: #7a5020; line-height: 1.6; }
 
-  // Header row
-  doc.setFillColor(40,40,15);
-  doc.rect(16,y+12,W-32,8,'F');
-  doc.setFontSize(8.5);
-  doc.setFont('helvetica','bold');
-  doc.setTextColor(140,140,40);
-  doc.text('PAGO',25,y+18);
-  doc.text('PORCENTAJE',75,y+18);
-  doc.text('MONTO',120,y+18);
-  doc.text('FECHA LIMITE',155,y+18);
+  .footer { background: #2a2010; padding: 14px 30px; text-align: center; margin-top: auto; }
+  .footer p { color: #7a6840; font-size: 9px; margin-top: 3px; }
 
-  doc.setFont('helvetica','normal');
-  let py=y+26;
-  sched.forEach((p,i)=>{
-    const bg=i%2===0 ? [25,25,18] : [30,30,20];
-    doc.setFillColor(...bg);
-    doc.rect(16,py-5,W-32,9,'F');
-    doc.setTextColor(200,190,150);
-    doc.text(p.label,25,py);
-    doc.setTextColor(150,200,120);
-    doc.text(p.pct,75,py);
-    doc.text(formatCRC(p.amount).replace('\u20a1','CRC '),120,py);
-    doc.setTextColor(160,160,100);
-    doc.text(p.date,155,py);
-    py+=9;
-  });
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+  }
+  .print-btn { display: block; margin: 0 auto 20px; padding: 12px 32px; background: #c0622a; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<button class="print-btn no-print" onclick="window.print()">⬇ Guardar como PDF (Ctrl+P → Guardar como PDF)</button>
+<div class="page">
+  <div class="header">
+    <h1>FERIA DEL MUEBLE SARCHI 2026</h1>
+    <p>CACITUS · Camara de Comercio, Industria y Turismo de Sarchi</p>
+    <p>Agosto 2026 · Campo Ferial Sarchi</p>
+  </div>
 
-  // ── Nota importante ──
-  y=238;
-  doc.setFillColor(42,26,8);
-  doc.setDrawColor(106,64,16);
-  doc.roundedRect(15,y,W-30,28,3,3,'FD');
-  doc.setFontSize(9);
-  doc.setFont('helvetica','bold');
-  doc.setTextColor(200,130,40);
-  doc.text('NOTA IMPORTANTE',25,y+8);
-  doc.setFont('helvetica','normal');
-  doc.setTextColor(180,140,80);
-  const nota='Si al 20 de junio de 2026 no se ha completado el pago del 100% del espacio, este sera';
-  const nota2='liberado y puesto a la venta nuevamente sin previo aviso.';
-  doc.text(nota,25,y+15);
-  doc.text(nota2,25,y+22);
+  <div class="body">
+    <div class="thanks-box">
+      <h2>¡GRACIAS POR RESERVAR SU ESPACIO!</h2>
+      <p>en la Feria del Mueble Sarchi 2026 organizada por CACITUS</p>
+    </div>
 
-  // ── Footer ──
-  doc.setFillColor(15,12,10);
-  doc.rect(0,H-22,W,22,'F');
-  doc.setFontSize(8);
-  doc.setFont('helvetica','normal');
-  doc.setTextColor(80,70,55);
-  doc.text('CACITUS · Camara de Comercio, Industria y Turismo de Sarchi · Feria del Mueble 2026',W/2,H-12,{align:'center'});
-  doc.text('Este documento es su comprobante oficial de reserva de espacio.',W/2,H-6,{align:'center'});
+    <div class="code-box">
+      <div class="code-label">CODIGO DE CONFIRMACION</div>
+      <div class="code-value">${code}</div>
+    </div>
 
-  doc.save(`Confirmacion_${id}_FeriaMueble2026.pdf`);
+    <div class="section">
+      <div class="section-title">DATOS DE CONFIRMACION</div>
+      <div class="data-grid">
+        <div class="data-cell"><div class="dl">NOMBRE DEL AFILIADO</div><div class="dv">${afl?.nom||''}</div></div>
+        <div class="data-cell"><div class="dl">NOMBRE DEL COMERCIO</div><div class="dv">${afl?.com||''}</div></div>
+        <div class="data-cell"><div class="dl">NUMERO DE AFILIADO</div><div class="dv">${afl?.cod||''}</div></div>
+        <div class="data-cell"><div class="dl">STAND ASIGNADO</div><div class="dv">${id} · ${s.grupo}</div></div>
+        <div class="data-cell"><div class="dl">DIMENSIONES</div><div class="dv">${s.size}</div></div>
+        <div class="data-cell"><div class="dl">FECHA DE RESERVA</div><div class="dv">${fecha}</div></div>
+      </div>
+    </div>
+
+    <div class="price-box">
+      <div class="price-label">MONTO TOTAL DEL ESPACIO</div>
+      <div class="price-value">${formatCRC(price)}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">PLAN DE PAGOS</div>
+      <table>
+        <thead>
+          <tr>
+            <th>PAGO</th>
+            <th style="text-align:center">PORCENTAJE</th>
+            <th style="text-align:right">MONTO</th>
+            <th style="text-align:center">FECHA LIMITE</th>
+          </tr>
+        </thead>
+        <tbody>${schedRows}</tbody>
+      </table>
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠ NOTA IMPORTANTE</div>
+      <div class="warn-text">Si al <strong>20 de junio de 2026</strong> no se ha completado el pago del 100% del espacio, este sera <strong>liberado y puesto a la venta nuevamente</strong> sin previo aviso. Para consultas comuniquese con CACITUS.</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p style="color:#c8a060;font-size:10px;font-weight:600">CACITUS · Camara de Comercio, Industria y Turismo de Sarchi · Feria del Mueble 2026</p>
+    <p>Este documento es su comprobante oficial de reserva de espacio.</p>
+    <p>Conserve este documento y su codigo de confirmacion.</p>
+  </div>
+</div>
+</body>
+</html>`;
+
+  const win=window.open('','_blank','width=900,height=700');
+  win.document.write(html);
+  win.document.close();
 }
 
 // ══════════════════════════════════════════════════
