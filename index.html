@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feria del Mueble Sarchí 2026</title>
+
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #1a1714; color: #f0ede6; min-height: 100vh; }
+
+/* HEADER */
+.app-header {
+  background: #111;
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid #2a2a2a; flex-wrap: wrap; gap: 10px;
+}
+.app-header h1 { font-size: 17px; font-weight: 600; }
+.app-header p  { font-size: 11px; color: #666; margin-top: 2px; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.badge { background: #c0622a; color: #fff; font-size: 11px; font-weight: 500; padding: 4px 12px; border-radius: 20px; }
+.admin-btn {
+  background: transparent; border: 1px solid #3a3530; color: #888;
+  font-size: 11px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; padding: 5px 12px;
+  border-radius: 6px; cursor: pointer; transition: all .15s;
+}
+.admin-btn:hover { border-color: #c0622a; color: #c0622a; }
+.admin-btn.active { background: #c0622a22; border-color: #c0622a; color: #e88050; }
+
+/* ADMIN BAR */
+#admin-bar {
+  display: none;
+  background: #1a1200; border-bottom: 1px solid #4a3800;
+  padding: 10px 24px; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+#admin-bar.visible { display: flex; }
+#admin-bar span { font-size: 11px; color: #c8900a; font-weight: 500; }
+.admin-note { font-size: 11px; color: #7a6020; }
+
+/* STATS */
+.stats-bar { display: flex; background: #111; border-bottom: 1px solid #222; }
+.stat { flex: 1; padding: 11px 16px; border-right: 1px solid #222; }
+.stat:last-child { border-right: none; }
+.stat-num { font-size: 22px; font-weight: 600; line-height: 1; }
+.stat-label { font-size: 10px; color: #555; margin-top: 3px; }
+
+/* LEGEND */
+.legend { background: #111; border-bottom: 1px solid #222; padding: 7px 20px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+.leg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #666; }
+.leg-sq { width: 13px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+/* MAP */
+.map-outer { padding: 20px; overflow-x: auto; }
+.map-inner { min-width: 900px; }
+
+/* TOOLTIP */
+#tip { position: fixed; background: #111; color: #f0ede6; border: 1px solid #3a3530; font-size: 12px; padding: 6px 10px; border-radius: 6px; pointer-events: none; display: none; z-index: 999; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; white-space: nowrap; }
+
+/* OVERLAY / MODAL */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+.modal { background: #1e1c18; border: 1px solid #3a3530; border-radius: 14px; width: 400px; max-width: 100%; overflow: hidden; max-height: 92vh; overflow-y: auto; }
+.modal-head { padding: 16px 20px; }
+.modal-head h2 { font-size: 16px; font-weight: 600; color: #fff; }
+.modal-head .sub { font-size: 11px; opacity: .6; margin-top: 2px; }
+.modal-body { padding: 18px 20px; }
+.timer-pill { display: inline-flex; align-items: center; gap: 6px; background: #2a2010; color: #e8a020; border: 1px solid #5a4010; border-radius: 20px; font-size: 12px; font-family: 'Courier New', 'Lucida Console', monospace; padding: 4px 12px; margin-bottom: 12px; }
+.tdot { width: 7px; height: 7px; border-radius: 50%; background: #e8a020; animation: blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:.2} }
+label { font-size: 11px; font-weight: 500; color: #777; display: block; margin: 11px 0 4px; }
+input[type=text], input[type=password] {
+  width: 100%; padding: 9px 12px; font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  border: 1px solid #3a3530; border-radius: 8px; background: #111; color: #f0ede6; outline: none;
+}
+input:focus { border-color: #c0622a; }
+.price-tag { background: #1a2a10; border: 1px solid #2a5a18; border-radius: 8px; padding: 10px 14px; margin: 12px 0; display: flex; justify-content: space-between; align-items: center; }
+.price-tag .pl { font-size: 11px; color: #6a9a5a; }
+.price-tag .pv { font-size: 18px; font-weight: 600; color: #8acc78; font-family: 'Courier New', 'Lucida Console', monospace; }
+.actions { display: flex; gap: 8px; margin-top: 16px; }
+.btn { flex: 1; padding: 10px; border-radius: 8px; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-weight: 500; cursor: pointer; border: 1px solid #3a3530; background: #111; color: #f0ede6; transition: all .12s; }
+.btn:hover { background: #2a2520; }
+.btn.ok { background: #c0622a; color: #fff; border-color: #c0622a; }
+.btn.ok:hover { background: #a05020; }
+.btn.ok:disabled { background: #3a3530; color: #555; border-color: #3a3530; cursor: not-allowed; }
+.btn.pdf-btn { background: #0f2a3a; color: #6abadf; border-color: #1a5a7a; }
+.btn.pdf-btn:hover { background: #1a3a4a; }
+
+/* Confirmation box */
+.confirm { background: #0f2a14; border: 1px solid #2a6a34; border-radius: 10px; padding: 14px; margin-top: 14px; }
+.conf-title { font-size: 14px; color: #4a9a5a; font-weight: 600; margin-bottom: 8px; }
+.conf-code { font-family: 'Courier New', 'Lucida Console', monospace; font-size: 20px; font-weight: 500; color: #6ab87a; letter-spacing: .12em; margin: 4px 0 10px; }
+.conf-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+.conf-row span:first-child { color: #5a8a64; }
+.conf-row span:last-child { color: #a0d0aa; font-weight: 500; }
+.pay-schedule { margin-top: 10px; border-top: 1px solid #2a5a34; padding-top: 10px; }
+.pay-row { display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 6px; }
+.pay-row .pay-label { color: #5a9a6a; }
+.pay-row .pay-amount { font-family: 'Courier New', 'Lucida Console', monospace; color: #8acc78; font-size: 12px; }
+.pay-row .pay-date { color: #4a7a54; }
+.warn-note { background: #2a1a08; border: 1px solid #6a4010; border-radius: 6px; padding: 8px 12px; font-size: 11px; color: #c88040; margin-top: 10px; line-height: 1.5; }
+
+/* ADMIN PANEL */
+.admin-panel { background: #1a1200; border-bottom: 2px solid #4a3800; padding: 14px 24px; }
+.admin-panel h3 { font-size: 13px; color: #c8900a; font-weight: 600; margin-bottom: 10px; }
+.admin-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.admin-stand-pill {
+  font-size: 10px; font-family: 'Courier New', 'Lucida Console', monospace; padding: 4px 8px; border-radius: 4px;
+  cursor: pointer; border: 1px solid transparent; transition: all .12s; user-select: none;
+}
+.asp-available { background: #0f2a14; color: #6ab870; border-color: #2a6a34; }
+.asp-available:hover { background: #1a3a20; }
+.asp-blocked { background: #2a1a08; color: #c87030; border-color: #5a3010; }
+.asp-blocked:hover { background: #3a2510; }
+.asp-sold { background: #2a0f0f; color: #d06060; border-color: #6a2020; cursor: not-allowed; }
+.asp-reserved { background: #2a2008; color: #d0a030; border-color: #6a5010; cursor: not-allowed; }
+.admin-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.admin-action-btn { font-size: 11px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; padding: 6px 14px; border-radius: 6px; cursor: pointer; border: 1px solid #3a3010; background: #2a2008; color: #c8a030; }
+.admin-action-btn:hover { background: #3a3010; }
+
+/* Blocked stand visual */
+.stand-blocked rect { fill: #4a2a10 !important; stroke: #7a4a20 !important; }
+.stand-blocked text { fill: #c87030 !important; }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div>
+    <h1>Feria del Mueble Sarchí 2026</h1>
+    <p>CACITUS · Cámara de Comercio · Selección de stands en tiempo real</p>
+  </div>
+  <div class="header-right">
+    <span class="badge">Agosto 2026</span>
+    <button class="admin-btn" id="admin-toggle-btn" onclick="toggleAdminLogin()">⚙ Administrador</button>
+  </div>
+</div>
+
+<div id="admin-bar">
+  <span>⚙ MODO ADMINISTRADOR ACTIVO</span>
+  <span class="admin-note">Haga clic en cualquier stand para habilitarlo o bloquearlo</span>
+  <button class="admin-action-btn" onclick="logoutAdmin()">Cerrar sesión</button>
+</div>
+
+<div id="admin-panel-section" style="display:none">
+  <div class="admin-panel">
+    <h3>Panel de control — Estado de stands</h3>
+    <div class="admin-grid" id="admin-grid"></div>
+    <div class="admin-actions">
+      <button class="admin-action-btn" onclick="adminAction('unblock-all')">✓ Habilitar todos los disponibles</button>
+      <button class="admin-action-btn" onclick="adminAction('block-all-available')">✗ Bloquear todos los libres</button>
+    </div>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat"><div class="stat-num" id="sd" style="color:#4a9a5a">90</div><div class="stat-label">Disponibles</div></div>
+  <div class="stat"><div class="stat-num" id="sr" style="color:#e8a020">0</div><div class="stat-label">Reservados</div></div>
+  <div class="stat"><div class="stat-num" id="sv" style="color:#d94040">0</div><div class="stat-label">Vendidos</div></div>
+  <div class="stat"><div class="stat-num" id="sb" style="color:#c87030">0</div><div class="stat-label">Bloqueados</div></div>
+</div>
+
+<div class="legend">
+  <span style="font-size:11px;color:#444;margin-right:2px">Referencia:</span>
+  <div class="leg"><div class="leg-sq" style="background:#3a7d44"></div>Disponible</div>
+  <div class="leg"><div class="leg-sq" style="background:#c87800"></div>Reservado (5 min)</div>
+  <div class="leg"><div class="leg-sq" style="background:#c0392b"></div>Vendido</div>
+  <div class="leg"><div class="leg-sq" style="background:#1a6fa8"></div>Seleccionado</div>
+  <div class="leg"><div class="leg-sq" style="background:#4a2a10;border:1px solid #c87030"></div>Bloqueado (admin)</div>
+  <div class="leg"><div class="leg-sq" style="background:#6a5020;border:1px dashed #c8901a"></div>Bloque grande (2×2)</div>
+  <div class="leg"><div class="leg-sq" style="background:#4a4a20;border:1px dashed #aaaa40"></div>Bloque mediano (1×2)</div>
+</div>
+
+<div class="map-outer"><div class="map-inner">
+  <svg id="svg" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%"></svg>
+</div></div>
+
+<div id="tip"></div>
+<div id="modal-root"></div>
+
+<script>
+// ══════════════════════════════════════════════════
+// PRICES
+// ══════════════════════════════════════════════════
+const PRICES = {
+  grande:      1800000,  // bloque 4 stands
+  mediano:      900000,  // bloque 2 stands
+  individual:   450000,
+  artesano:      90000,
+  emprendedor:   90000,
+  gastro:        90000,
+};
+
+function getPrice(s) {
+  return PRICES[s.tipo] ?? 90000;
+}
+
+function formatCRC(n) {
+  return '\u20a1' + n.toLocaleString('es-CR');
+}
+
+// Payment schedule from a price
+function paySchedule(total) {
+  const p1 = Math.round(total * 0.35);
+  const p2 = Math.round(total * 0.35);
+  const p3 = total - p1 - p2;
+  return [
+    { pct:'35%', amount: p1, date:'Al reservar el espacio',     label:'1er pago' },
+    { pct:'35%', amount: p2, date:'15 de mayo de 2026',          label:'2do pago' },
+    { pct:'30%', amount: p3, date:'15 de junio de 2026',         label:'3er pago' },
+  ];
+}
+
+// ══════════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════════
+const RESERVE_MS = 5 * 60 * 1000;
+const ADMIN_PASS = 'cacitus2026';
+
+// ══════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════
+let stands = {};
+let selected = null;
+let timerInterval = null;
+let adminMode = false;
+
+// ══════════════════════════════════════════════════
+// INIT STANDS WITH POSITIONS
+// ══════════════════════════════════════════════════
+function init() {
+  stands = {};
+  const G1W=52, G1H=34, G2W=38, G2H=28, GAP=5;
+
+  // ── GALPÓN 1 ──
+  const G1X=48, G1Y=110;
+  const rowYs = [
+    G1Y+8,
+    G1Y+8+G1H+GAP,
+    G1Y+8+2*(G1H+GAP)+22,
+    G1Y+8+3*(G1H+GAP)+22,
+  ];
+
+  // 3 grandes (2×2 cuadro)
+  for (let b=0;b<3;b++) {
+    const bx = G1X+8 + b*(2*(G1W+GAP)+18);
+    for (let row=0;row<2;row++)
+      for (let col=0;col<2;col++) {
+        const id=`MG${b+1}-${row*2+col+1}`;
+        stands[id]={ x:bx+col*(G1W+GAP), y:rowYs[row], w:G1W, h:G1H,
+          status:'available', galpon:1, cat:'Mueblero', size:'6×5 m',
+          grupo:`Bloque grande ${b+1}`, tipo:'grande' };
+      }
+  }
+
+  // 4 medianos (1×2)
+  const medX = G1X+8+3*(2*(G1W+GAP)+18)+18;
+  for (let b=0;b<4;b++) {
+    const bCol=b%2, bRow=Math.floor(b/2);
+    const bx = medX + bCol*(2*(G1W+GAP)+18);
+    for (let col=0;col<2;col++) {
+      const id=`MM${b+1}-${col+1}`;
+      stands[id]={ x:bx+col*(G1W+GAP), y:rowYs[bRow], w:G1W, h:G1H,
+        status:'available', galpon:1, cat:'Mueblero', size:'6×5 m',
+        grupo:`Bloque mediano ${b+1}`, tipo:'mediano' };
+    }
+  }
+
+  // 18 individuales — filas C y D
+  for (let i=0;i<18;i++) {
+    const row=Math.floor(i/9), col=i%9;
+    const id=`MI-${i+1}`;
+    stands[id]={ x:G1X+8+col*(G1W+GAP), y:rowYs[2+row], w:G1W, h:G1H,
+      status:'available', galpon:1, cat:'Mueblero', size:'6×5 m',
+      grupo:'Individual', tipo:'individual' };
+  }
+
+  const G1_BOTTOM = G1Y+8+4*(G1H+GAP)+22+20;
+
+  // ── GALPÓN 2 ──
+  const G2Y = G1_BOTTOM+62, G2X=48;
+  const r2=[
+    G2Y+8,
+    G2Y+8+G2H+GAP,
+    G2Y+8+2*(G2H+GAP)+18,
+    G2Y+8+3*(G2H+GAP)+18,
+  ];
+
+  // Artesanos rows 0-1 (10 each)
+  for (let i=0;i<20;i++) {
+    const id=`A-${i+1}`;
+    stands[id]={ x:G2X+8+(i%10)*(G2W+GAP), y:r2[Math.floor(i/10)], w:G2W, h:G2H,
+      status:'available', galpon:2, cat:'Artesano', size:'3×3 m', grupo:'Artesanos', tipo:'artesano' };
+  }
+
+  // Emprendedores rows 2-3 (9 each = 18)
+  for (let i=0;i<18;i++) {
+    const id=`E-${i+1}`;
+    stands[id]={ x:G2X+8+(i%9)*(G2W+GAP), y:r2[2+Math.floor(i/9)], w:G2W, h:G2H,
+      status:'available', galpon:2, cat:'Emprendedor', size:'3×3 m', grupo:'Emprendedores', tipo:'emprendedor' };
+  }
+
+  // Gastronomía — to the right of emprendedores, 7+7
+  const gastX = G2X+8+10*(G2W+GAP)+20;
+  for (let i=0;i<14;i++) {
+    const id=`G-${i+1}`;
+    stands[id]={ x:gastX+(i%7)*(G2W+GAP), y:r2[2+Math.floor(i/7)], w:G2W, h:G2H,
+      status:'available', galpon:2, cat:'Gastronomía', size:'3×3 m', grupo:'Gastronomía', tipo:'gastro' };
+  }
+
+  // store bounding boxes
+  const allG1 = Object.values(stands).filter(s=>s.galpon===1);
+  const allG2 = Object.values(stands).filter(s=>s.galpon===2);
+  window._g1 = { x:G1X, y:G1Y, w:880, h:Math.max(...allG1.map(s=>s.y+s.h))-G1Y+20 };
+  window._g2 = { x:G2X, y:G2Y, w:880, h:Math.max(...allG2.map(s=>s.y+s.h))-G2Y+20 };
+  window._totalH = window._g2.y+window._g2.h+70;
+}
+
+// ══════════════════════════════════════════════════
+// COLORS
+// ══════════════════════════════════════════════════
+function color(id) {
+  if (id===selected) return {f:'#1a6fa8',s:'#0e4e7a',t:'#fff'};
+  const st=stands[id].status;
+  if (st==='available') return {f:'#3a7d44',s:'#285a30',t:'#fff'};
+  if (st==='reserved')  return {f:'#c87800',s:'#885200',t:'#fff'};
+  if (st==='sold')      return {f:'#c0392b',s:'#801a1a',t:'#fff'};
+  if (st==='blocked')   return {f:'#4a2a10',s:'#7a4a20',t:'#c87030'};
+  return {f:'#555',s:'#333',t:'#fff'};
+}
+
+// ══════════════════════════════════════════════════
+// SVG RENDER
+// ══════════════════════════════════════════════════
+const NS='http://www.w3.org/2000/svg';
+const E=(tag,a,txt)=>{ const e=document.createElementNS(NS,tag); for(const[k,v]of Object.entries(a))e.setAttribute(k,v); if(txt!==undefined)e.textContent=txt; return e; };
+
+function render() {
+  const svg=document.getElementById('svg');
+  svg.innerHTML='';
+  const W=980, H=window._totalH+40;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+
+  // background grass
+  svg.appendChild(E('rect',{x:0,y:0,width:W,height:H,fill:'#1e2e10'}));
+  for(let gx=0;gx<W;gx+=18) svg.appendChild(E('line',{x1:gx,y1:0,x2:gx,y2:H,stroke:'#182808','stroke-width':'0.7'}));
+  for(let gy=0;gy<H;gy+=18) svg.appendChild(E('line',{x1:0,y1:gy,x2:W,y2:gy,stroke:'#182808','stroke-width':'0.7'}));
+
+  // Parkings
+  drawParking(svg,0,0,W,90,'PARQUEO NORTE  ↑');
+  drawParking(svg,0,H-90,W,90,'↓  PARQUEO SUR');
+
+  // Facilities right side
+  drawFacility(svg,W-42,100,32,65,'#5a4028','Baños');
+  drawFacility(svg,W-42,window._g2.y+10,32,75,'#7a3a20','Soda 1·2');
+  drawFacility(svg,6,H/2-35,28,70,'#1a4a6a','Entrada');
+
+  // Corridor
+  const corrY=window._g1.y+window._g1.h+8;
+  const corrH=window._g2.y-corrY-8;
+  svg.appendChild(E('rect',{x:42,y:corrY,width:W-88,height:corrH,fill:'#2a2820',rx:2}));
+  svg.appendChild(E('text',{x:W/2,y:corrY+corrH/2,'text-anchor':'middle','dominant-baseline':'middle',fill:'#444','font-size':'10','font-family':'DM Sans,sans-serif'},'— pasillo central —'));
+
+  // Galpones shells
+  const g1=window._g1, g2=window._g2;
+  drawGalpon(svg,g1.x,g1.y,g1.w,g1.h,'#c8843a','GALPÓN 1 — MUEBLEROS (38 stands · 6×5 m)');
+  drawGalpon(svg,g2.x,g2.y,g2.w,g2.h,'#4a8a50','GALPÓN 2 — ARTESANOS · EMPRENDEDORES · GASTRONOMÍA (52 stands · 3×3 m)');
+
+  // Section labels G1
+  const minIndY=Math.min(...Object.values(stands).filter(s=>s.tipo==='individual').map(s=>s.y));
+  const minTopY=Math.min(...Object.values(stands).filter(s=>s.galpon===1&&s.tipo!=='individual').map(s=>s.y));
+  svg.appendChild(E('text',{x:54,y:minTopY-8,fill:'#e8a050','font-size':'9','font-family':'DM Sans,sans-serif','font-weight':'500'},'Bloques grandes (G1–G3) y medianos (M1–M4)'));
+  svg.appendChild(E('text',{x:54,y:minIndY-8,fill:'#c88050','font-size':'9','font-family':'DM Sans,sans-serif','font-weight':'500'},'Stands individuales'));
+
+  // Section labels G2
+  svg.appendChild(E('text',{x:54,y:stands['A-1'].y-7,fill:'#6ab870','font-size':'9','font-family':'DM Sans,sans-serif','font-weight':'500'},'Artesanos'));
+  svg.appendChild(E('text',{x:54,y:stands['E-1'].y-7,fill:'#6a9abf','font-size':'9','font-family':'DM Sans,sans-serif','font-weight':'500'},'Emprendedores'));
+  svg.appendChild(E('text',{x:stands['G-1'].x,y:stands['G-1'].y-7,fill:'#d4845a','font-size':'9','font-family':'DM Sans,sans-serif','font-weight':'500'},'Gastronomía'));
+
+  // Group outlines
+  for(let b=1;b<=3;b++) drawGroupBox(svg,`MG${b}`,'#c8901a','#6a5010');
+  for(let b=1;b<=4;b++) drawGroupBox(svg,`MM${b}`,'#aaaa40','#4a4a10');
+
+  // Stands
+  Object.keys(stands).forEach(id=>drawStand(svg,id));
+
+  // Compass
+  const cx=W-30,cy=30;
+  svg.appendChild(E('circle',{cx,cy,r:22,fill:'rgba(10,10,8,.85)',stroke:'#444','stroke-width':'1'}));
+  svg.appendChild(E('polygon',{points:`${cx},${cy-15} ${cx-5},${cy+5} ${cx},${cy+1} ${cx+5},${cy+5}`,fill:'#c0392b'}));
+  svg.appendChild(E('polygon',{points:`${cx},${cy+15} ${cx-5},${cy-5} ${cx},${cy-1} ${cx+5},${cy-5}`,fill:'#444'}));
+  svg.appendChild(E('text',{x:cx,y:cy-17,'text-anchor':'middle',fill:'#c0392b','font-size':'10','font-family':'DM Sans,sans-serif','font-weight':'700'},'N'));
+
+  renderStats();
+  if(adminMode) renderAdminGrid();
+}
+
+function drawParking(svg,x,y,w,h,label){
+  svg.appendChild(E('rect',{x,y,width:w,height:h,fill:'#1a1a14'}));
+  for(let px=60;px<w;px+=46) svg.appendChild(E('line',{x1:px,y1:y+5,x2:px,y2:y+h-5,stroke:'#fff','stroke-width':'0.5',opacity:'0.2'}));
+  svg.appendChild(E('text',{x:w/2,y:y+h/2,'text-anchor':'middle','dominant-baseline':'middle',fill:'#555','font-size':'12','font-family':'DM Sans,sans-serif','font-weight':'500'},label));
+}
+
+function drawFacility(svg,x,y,w,h,fill,label){
+  svg.appendChild(E('rect',{x,y,width:w,height:h,fill,rx:4,stroke:'#ffffff1a','stroke-width':'1'}));
+  const tx=x+w/2,ty=y+h/2;
+  svg.appendChild(E('text',{x:tx,y:ty,'text-anchor':'middle','dominant-baseline':'middle',fill:'#fff','font-size':'9','font-family':'DM Sans,sans-serif','font-weight':'500',transform:`rotate(-90,${tx},${ty})`},label));
+}
+
+function drawGalpon(svg,x,y,w,h,roofColor,label){
+  svg.appendChild(E('rect',{x:x+4,y:y+4,width:w,height:h,fill:'rgba(0,0,0,.5)',rx:6}));
+  svg.appendChild(E('rect',{x,y,width:w,height:h,fill:'#14120e',stroke:roofColor,'stroke-width':'2',rx:6}));
+  for(let sy=y;sy<y+h;sy+=16)
+    svg.appendChild(E('rect',{x,y:sy,width:w,height:8,fill:roofColor,opacity:'0.15'}));
+  svg.appendChild(E('text',{x:x+w/2,y:y+h+14,'text-anchor':'middle',fill:roofColor,'font-size':'11','font-family':'DM Sans,sans-serif','font-weight':'600'},label));
+}
+
+function drawGroupBox(svg,prefix,strokeColor,fillColor){
+  const mb=Object.entries(stands).filter(([id])=>id.startsWith(prefix));
+  if(!mb.length)return;
+  const xs=mb.map(([,s])=>s.x), ys=mb.map(([,s])=>s.y);
+  const x2=mb.map(([,s])=>s.x+s.w), y2=mb.map(([,s])=>s.y+s.h);
+  const bx=Math.min(...xs)-4,by=Math.min(...ys)-4;
+  const bw=Math.max(...x2)-bx+4,bh=Math.max(...y2)-by+4;
+  svg.appendChild(E('rect',{x:bx,y:by,width:bw,height:bh,fill:fillColor,opacity:'0.25',rx:4}));
+  svg.appendChild(E('rect',{x:bx,y:by,width:bw,height:bh,fill:'none',stroke:strokeColor,'stroke-width':'1.2','stroke-dasharray':'5,3',rx:4}));
+  svg.appendChild(E('text',{x:bx+4,y:by+10,fill:strokeColor,'font-size':'8.5','font-family':'DM Mono,monospace','font-weight':'500'},prefix.replace('MG','G').replace('MM','M')));
+}
+
+function drawStand(svg,id){
+  const s=stands[id], c=color(id);
+  const isBlocked=s.status==='blocked';
+  const isSold=s.status==='sold';
+  const isReservedOther=s.status==='reserved'&&id!==selected;
+  const notClickable=isSold||isReservedOther||(isBlocked&&!adminMode);
+  const g=E('g',{'data-id':id,style:`cursor:${notClickable?'not-allowed':'pointer'}`});
+
+  const rect=E('rect',{x:s.x,y:s.y,width:s.w,height:s.h,fill:c.f,stroke:c.s,'stroke-width':'1.5',rx:'3'});
+  if(isBlocked){ rect.setAttribute('stroke-dasharray','4,2'); }
+  g.appendChild(rect);
+
+  // Blocked X mark
+  if(isBlocked){
+    g.appendChild(E('line',{x1:s.x+4,y1:s.y+4,x2:s.x+s.w-4,y2:s.y+s.h-4,stroke:'#c87030','stroke-width':'1.5'}));
+    g.appendChild(E('line',{x1:s.x+s.w-4,y1:s.y+4,x2:s.x+4,y2:s.y+s.h-4,stroke:'#c87030','stroke-width':'1.5'}));
+  }
+
+  const lbl=id.replace('MG','G').replace('MM','M').replace('MI-','I').replace('A-','A').replace('E-','E').replace('G-','Gst');
+  g.appendChild(E('text',{x:s.x+s.w/2,y:s.y+s.h/2,'text-anchor':'middle','dominant-baseline':'middle',fill:c.t,'font-size':'8','font-family':'DM Mono,monospace','font-weight':'500',style:'pointer-events:none'},lbl));
+
+  g.addEventListener('mouseenter',ev=>{
+    const stLbl={available:'Disponible',reserved:'Reservado',sold:'Vendido',blocked:'Bloqueado'}[s.status];
+    const price=formatCRC(getPrice(s));
+    document.getElementById('tip').innerHTML=`<strong>${id}</strong> · ${s.grupo} · ${s.size} · ${price} · ${stLbl}`;
+    document.getElementById('tip').style.display='block';
+  });
+  g.addEventListener('mousemove',ev=>{
+    document.getElementById('tip').style.left=(ev.clientX+14)+'px';
+    document.getElementById('tip').style.top=(ev.clientY-30)+'px';
+  });
+  g.addEventListener('mouseleave',()=>{ document.getElementById('tip').style.display='none'; });
+  g.addEventListener('click',()=>{ onStandClick(id); });
+
+  svg.appendChild(g);
+}
+
+function renderStats(){
+  let av=0,re=0,so=0,bl=0;
+  Object.values(stands).forEach(s=>{
+    if(s.status==='available')av++;
+    else if(s.status==='reserved')re++;
+    else if(s.status==='sold')so++;
+    else if(s.status==='blocked')bl++;
+  });
+  document.getElementById('sd').textContent=av;
+  document.getElementById('sr').textContent=re;
+  document.getElementById('sv').textContent=so;
+  document.getElementById('sb').textContent=bl;
+}
+
+// ══════════════════════════════════════════════════
+// STAND CLICK
+// ══════════════════════════════════════════════════
+function onStandClick(id){
+  const s=stands[id];
+  if(adminMode){
+    // Admin toggles blocked/available
+    if(s.status==='sold'||s.status==='reserved') return;
+    stands[id].status = s.status==='blocked' ? 'available' : 'blocked';
+    render();
+    return;
+  }
+  if(s.status==='sold'||s.status==='blocked') return;
+  if(s.status==='reserved'&&id!==selected) return;
+  selected=id;
+  render();
+  showModal(id);
+}
+
+// ══════════════════════════════════════════════════
+// MODAL
+// ══════════════════════════════════════════════════
+function showModal(id){
+  const s=stands[id];
+  const price=getPrice(s);
+  const sched=paySchedule(price);
+  if(s.status==='available'){
+    stands[id].status='reserved';
+    stands[id].reservedAt=Date.now();
+    render();
+  }
+  document.getElementById('modal-root').innerHTML=`
+  <div class="overlay" id="ov">
+   <div class="modal">
+    <div class="modal-head" style="background:#c0622a">
+      <h2>Stand ${id}</h2>
+      <div class="sub">${s.size} · ${s.cat} · ${s.grupo}</div>
+    </div>
+    <div class="modal-body">
+      <div id="ta"></div>
+      <div class="price-tag">
+        <div><div class="pl">Precio del espacio</div></div>
+        <div class="pv">${formatCRC(price)}</div>
+      </div>
+      <label>Código de afiliado</label>
+      <input id="fc" type="text" placeholder="Ej: CAM-00123" autocomplete="off"/>
+      <label>Nombre del afiliado</label>
+      <input id="fn" type="text" placeholder="Nombre completo"/>
+      <label>Nombre del comercio</label>
+      <input id="fm" type="text" placeholder="Nombre del negocio"/>
+      <div class="actions">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn ok" id="bok" onclick="doConfirm('${id}')">Confirmar compra</button>
+      </div>
+      <div id="cr"></div>
+    </div>
+   </div>
+  </div>`;
+  document.getElementById('ov').addEventListener('click',e=>{ if(e.target.id==='ov')closeModal(); });
+  startTimer(id);
+}
+
+function startTimer(id){
+  if(timerInterval)clearInterval(timerInterval);
+  const tick=()=>{
+    const ta=document.getElementById('ta');
+    if(!ta){clearInterval(timerInterval);return;}
+    const ms=Math.max(0,RESERVE_MS-(Date.now()-stands[id].reservedAt));
+    const m=Math.floor(ms/60000),s2=Math.floor((ms%60000)/1000);
+    if(ms>0){
+      ta.innerHTML=`<div class="timer-pill"><div class="tdot"></div>Espacio reservado por ${m}:${s2.toString().padStart(2,'0')}</div>`;
+    } else {
+      stands[id].status='available'; delete stands[id].reservedAt;
+      closeModal(); render();
+    }
+  };
+  tick(); timerInterval=setInterval(tick,1000);
+}
+
+function doConfirm(id){
+  const cod=document.getElementById('fc').value.trim();
+  const nom=document.getElementById('fn').value.trim();
+  const com=document.getElementById('fm').value.trim();
+  if(!cod||!nom||!com){alert('Por favor complete todos los campos.');return;}
+  clearInterval(timerInterval);
+  stands[id].status='sold';
+  stands[id].afiliado={cod,nom,com};
+  delete stands[id].reservedAt;
+  const code='FM26-'+Math.random().toString(36).substring(2,8).toUpperCase();
+  stands[id].confirmCode=code;
+  stands[id].confirmDate=new Date().toLocaleDateString('es-CR',{day:'2-digit',month:'long',year:'numeric'});
+  document.getElementById('bok').disabled=true;
+
+  const s=stands[id];
+  const price=getPrice(s);
+  const sched=paySchedule(price);
+
+  document.getElementById('cr').innerHTML=`
+    <div class="confirm">
+      <div class="conf-title">✓ Espacio confirmado</div>
+      <div class="conf-code">${code}</div>
+      <div class="conf-row"><span>Afiliado</span><span>${nom}</span></div>
+      <div class="conf-row"><span>Comercio</span><span>${com}</span></div>
+      <div class="conf-row"><span>Stand</span><span>${id} · ${s.grupo}</span></div>
+      <div class="conf-row"><span>Total</span><span>${formatCRC(price)}</span></div>
+      <div class="pay-schedule">
+        ${sched.map(p=>`
+        <div class="pay-row">
+          <span class="pay-label">${p.label} (${p.pct})</span>
+          <span class="pay-amount">${formatCRC(p.amount)}</span>
+          <span class="pay-date">${p.date}</span>
+        </div>`).join('')}
+      </div>
+      <div class="warn-note">⚠ Si al 20 de junio de 2026 no se ha completado el 100% del pago, el espacio será liberado y puesto a la venta nuevamente.</div>
+    </div>
+    <div class="actions" style="margin-top:12px">
+      <button class="btn pdf-btn" onclick="generatePDF('${id}')">⬇ Descargar confirmación PDF</button>
+    </div>`;
+
+  selected=null;
+  render();
+}
+
+function closeModal(){
+  clearInterval(timerInterval);
+  if(selected&&stands[selected]?.status==='reserved'){
+    stands[selected].status='available';
+    delete stands[selected].reservedAt;
+  }
+  selected=null;
+  document.getElementById('modal-root').innerHTML='';
+  render();
+}
+
+// ══════════════════════════════════════════════════
+// PDF GENERATION — print-to-PDF, no external libs
+// ══════════════════════════════════════════════════
+function generatePDF(id){
+  const s=stands[id];
+  const price=getPrice(s);
+  const sched=paySchedule(price);
+  const afl=s.afiliado;
+  const code=s.confirmCode||'---';
+  const fecha=s.confirmDate||new Date().toLocaleDateString('es-CR',{day:'2-digit',month:'long',year:'numeric'});
+
+  const schedRows=sched.map((p,i)=>`
+    <tr style="background:${i%2===0?'#f9f6f0':'#f2ede4'}">
+      <td style="padding:8px 12px;font-weight:600;color:#5a3a10">${p.label}</td>
+      <td style="padding:8px 12px;text-align:center;color:#3a6a28;font-weight:600">${p.pct}</td>
+      <td style="padding:8px 12px;text-align:right;font-family:monospace;font-weight:700;color:#2a5a20;font-size:14px">${formatCRC(p.amount)}</td>
+      <td style="padding:8px 12px;text-align:center;color:#6a5020">${p.date}</td>
+    </tr>`).join('');
+
+  const html=`<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Confirmacion ${id} - Feria del Mueble Sarchi 2026</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #fff; color: #1a1a1a; width: 210mm; min-height: 297mm; }
+  .page { width: 210mm; min-height: 297mm; padding: 0; display: flex; flex-direction: column; }
+
+  .header { background: #c0622a; padding: 28px 30px 22px; text-align: center; }
+  .header h1 { color: #fff; font-size: 22px; font-weight: 700; letter-spacing: 1px; margin-bottom: 6px; }
+  .header p  { color: rgba(255,255,255,0.8); font-size: 11px; margin-top: 3px; }
+
+  .body { padding: 24px 30px; flex: 1; }
+
+  .thanks-box { background: #fdf6ee; border: 2px solid #c0622a; border-radius: 8px; padding: 16px 20px; text-align: center; margin-bottom: 20px; }
+  .thanks-box h2 { color: #8a4010; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .thanks-box p  { color: #a06030; font-size: 12px; }
+
+  .code-box { background: #f0f9f2; border: 2px solid #3a8a4a; border-radius: 8px; padding: 14px 20px; text-align: center; margin-bottom: 20px; }
+  .code-label { font-size: 10px; font-weight: 600; color: #4a8a54; letter-spacing: 2px; margin-bottom: 4px; }
+  .code-value { font-family: monospace; font-size: 26px; font-weight: 700; color: #2a6a38; letter-spacing: 4px; }
+
+  .section { border: 1px solid #e0d8cc; border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+  .section-title { background: #f5ede0; padding: 9px 14px; font-size: 11px; font-weight: 700; color: #7a4a18; letter-spacing: 1px; border-bottom: 1px solid #e0d0b8; }
+  .data-grid { display: grid; grid-template-columns: 1fr 1fr; }
+  .data-cell { padding: 10px 14px; border-bottom: 1px solid #ede5d8; }
+  .data-cell:nth-child(odd) { border-right: 1px solid #ede5d8; background: #faf7f3; }
+  .data-cell .dl { font-size: 9px; font-weight: 600; color: #9a7a50; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .data-cell .dv { font-size: 13px; color: #2a2010; font-weight: 500; }
+
+  .price-box { background: linear-gradient(135deg, #f0f9ec, #e8f5e0); border: 2px solid #4a8a30; border-radius: 8px; padding: 14px 20px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+  .price-label { font-size: 12px; font-weight: 600; color: #3a6a20; }
+  .price-value { font-family: monospace; font-size: 24px; font-weight: 700; color: #2a5a18; }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: #3a2a10; }
+  thead th { padding: 9px 12px; color: #f0d898; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-align: left; }
+  thead th:nth-child(2), thead th:nth-child(3) { text-align: center; }
+
+  .warn-box { background: #fff8ec; border: 2px solid #c87820; border-radius: 8px; padding: 14px 18px; margin-top: 16px; }
+  .warn-title { font-size: 11px; font-weight: 700; color: #8a5010; margin-bottom: 6px; letter-spacing: 0.5px; }
+  .warn-text  { font-size: 11px; color: #7a5020; line-height: 1.6; }
+
+  .footer { background: #2a2010; padding: 14px 30px; text-align: center; margin-top: auto; }
+  .footer p { color: #7a6840; font-size: 9px; margin-top: 3px; }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+  }
+  .print-btn { display: block; margin: 0 auto 20px; padding: 12px 32px; background: #c0622a; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<button class="print-btn no-print" onclick="window.print()">⬇ Guardar como PDF (Ctrl+P → Guardar como PDF)</button>
+<div class="page">
+  <div class="header">
+    <h1>FERIA DEL MUEBLE SARCHI 2026</h1>
+    <p>CACITUS · Camara de Comercio, Industria y Turismo de Sarchi</p>
+    <p>Agosto 2026 · Campo Ferial Sarchi</p>
+  </div>
+
+  <div class="body">
+    <div class="thanks-box">
+      <h2>¡GRACIAS POR RESERVAR SU ESPACIO!</h2>
+      <p>en la Feria del Mueble Sarchi 2026 organizada por CACITUS</p>
+    </div>
+
+    <div class="code-box">
+      <div class="code-label">CODIGO DE CONFIRMACION</div>
+      <div class="code-value">${code}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">DATOS DE CONFIRMACION</div>
+      <div class="data-grid">
+        <div class="data-cell"><div class="dl">NOMBRE DEL AFILIADO</div><div class="dv">${afl?.nom||''}</div></div>
+        <div class="data-cell"><div class="dl">NOMBRE DEL COMERCIO</div><div class="dv">${afl?.com||''}</div></div>
+        <div class="data-cell"><div class="dl">NUMERO DE AFILIADO</div><div class="dv">${afl?.cod||''}</div></div>
+        <div class="data-cell"><div class="dl">STAND ASIGNADO</div><div class="dv">${id} · ${s.grupo}</div></div>
+        <div class="data-cell"><div class="dl">DIMENSIONES</div><div class="dv">${s.size}</div></div>
+        <div class="data-cell"><div class="dl">FECHA DE RESERVA</div><div class="dv">${fecha}</div></div>
+      </div>
+    </div>
+
+    <div class="price-box">
+      <div class="price-label">MONTO TOTAL DEL ESPACIO</div>
+      <div class="price-value">${formatCRC(price)}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">PLAN DE PAGOS</div>
+      <table>
+        <thead>
+          <tr>
+            <th>PAGO</th>
+            <th style="text-align:center">PORCENTAJE</th>
+            <th style="text-align:right">MONTO</th>
+            <th style="text-align:center">FECHA LIMITE</th>
+          </tr>
+        </thead>
+        <tbody>${schedRows}</tbody>
+      </table>
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠ NOTA IMPORTANTE</div>
+      <div class="warn-text">Si al <strong>20 de junio de 2026</strong> no se ha completado el pago del 100% del espacio, este sera <strong>liberado y puesto a la venta nuevamente</strong> sin previo aviso. Para consultas comuniquese con CACITUS.</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p style="color:#c8a060;font-size:10px;font-weight:600">CACITUS · Camara de Comercio, Industria y Turismo de Sarchi · Feria del Mueble 2026</p>
+    <p>Este documento es su comprobante oficial de reserva de espacio.</p>
+    <p>Conserve este documento y su codigo de confirmacion.</p>
+  </div>
+</div>
+</body>
+</html>`;
+
+  const win=window.open('','_blank','width=900,height=700');
+  win.document.write(html);
+  win.document.close();
+}
+
+// ══════════════════════════════════════════════════
+// ADMIN
+// ══════════════════════════════════════════════════
+function toggleAdminLogin(){
+  if(adminMode){ logoutAdmin(); return; }
+  document.getElementById('modal-root').innerHTML=`
+  <div class="overlay" id="ov">
+   <div class="modal" style="width:320px">
+    <div class="modal-head" style="background:#2a2010">
+      <h2>Acceso administrador</h2>
+      <div class="sub">CACITUS · Panel de control</div>
+    </div>
+    <div class="modal-body">
+      <label>Contraseña</label>
+      <input id="ap" type="password" placeholder="Contraseña de administrador"/>
+      <div class="actions" style="margin-top:14px">
+        <button class="btn" onclick="closeAdminModal()">Cancelar</button>
+        <button class="btn ok" onclick="loginAdmin()">Ingresar</button>
+      </div>
+      <div id="admin-err" style="font-size:11px;color:#d94040;margin-top:8px;text-align:center"></div>
+    </div>
+   </div>
+  </div>`;
+  document.getElementById('ov').addEventListener('click',e=>{ if(e.target.id==='ov')closeAdminModal(); });
+  setTimeout(()=>document.getElementById('ap').focus(),100);
+  document.getElementById('ap').addEventListener('keydown',e=>{ if(e.key==='Enter')loginAdmin(); });
+}
+
+function loginAdmin(){
+  const pw=document.getElementById('ap').value;
+  if(pw===ADMIN_PASS){
+    adminMode=true;
+    closeAdminModal();
+    document.getElementById('admin-toggle-btn').classList.add('active');
+    document.getElementById('admin-toggle-btn').textContent='⚙ Admin activo';
+    document.getElementById('admin-bar').classList.add('visible');
+    document.getElementById('admin-panel-section').style.display='block';
+    render();
+  } else {
+    document.getElementById('admin-err').textContent='Contraseña incorrecta.';
+  }
+}
+
+function logoutAdmin(){
+  adminMode=false;
+  document.getElementById('admin-toggle-btn').classList.remove('active');
+  document.getElementById('admin-toggle-btn').textContent='⚙ Administrador';
+  document.getElementById('admin-bar').classList.remove('visible');
+  document.getElementById('admin-panel-section').style.display='none';
+  render();
+}
+
+function closeAdminModal(){
+  document.getElementById('modal-root').innerHTML='';
+}
+
+function renderAdminGrid(){
+  const grid=document.getElementById('admin-grid');
+  if(!grid)return;
+  grid.innerHTML='';
+  Object.entries(stands).forEach(([id,s])=>{
+    const cls=`admin-stand-pill asp-${s.status}`;
+    const pill=document.createElement('div');
+    pill.className=cls;
+    pill.textContent=id;
+    pill.title=`${s.grupo} · ${s.status}`;
+    if(s.status!=='sold'&&s.status!=='reserved'){
+      pill.addEventListener('click',()=>{
+        stands[id].status=s.status==='blocked'?'available':'blocked';
+        render();
+      });
+    }
+    grid.appendChild(pill);
+  });
+}
+
+function adminAction(action){
+  Object.keys(stands).forEach(id=>{
+    if(action==='unblock-all'&&stands[id].status==='blocked') stands[id].status='available';
+    if(action==='block-all-available'&&stands[id].status==='available') stands[id].status='blocked';
+  });
+  render();
+}
+
+// ══════════════════════════════════════════════════
+// START
+// ══════════════════════════════════════════════════
+init();
+render();
+</script>
+</body>
+</html>
