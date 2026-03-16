@@ -844,10 +844,179 @@ function adminAction(action){
 }
 
 // ══════════════════════════════════════════════════
+// GOOGLE SHEETS INTEGRATION
+// ══════════════════════════════════════════════════
+const GS_URL = 'https://script.google.com/macros/s/AKfycbz0QpXWEs1GYlyPvJ8jJway6kNsrE4O7WUK867kRDeaYiZRSBkjxTl9t9Utd9qeYxyUxQ/exec';
+let syncInterval = null;
+let lastSyncTime = 0;
+
+// Mostrar indicador de sincronización
+function setSyncStatus(state) {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  if (state === 'syncing') {
+    el.innerHTML = '<span style="color:#e8a020">● Sincronizando...</span>';
+  } else if (state === 'ok') {
+    el.innerHTML = '<span style="color:#4a9a5a">● En línea</span>';
+    lastSyncTime = Date.now();
+  } else if (state === 'error') {
+    el.innerHTML = '<span style="color:#d94040">● Sin conexión</span>';
+  }
+}
+
+// Leer todos los stands desde Sheets
+function syncFromSheet() {
+  setSyncStatus('syncing');
+  fetch(`${GS_URL}?action=getAll`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.success && data.stands) {
+        let changed = false;
+        Object.entries(data.stands).forEach(([id, remote]) => {
+          if (stands[id] && stands[id].status !== remote.status) {
+            // No sobreescribir reserva local activa (el usuario está en el formulario)
+            if (stands[id].status === 'reserved' && id === selected) return;
+            stands[id].status = remote.status;
+            if (remote.afiliado_cod) {
+              stands[id].afiliado = {
+                cod: remote.afiliado_cod,
+                nom: remote.afiliado_nom,
+                com: remote.afiliado_com,
+              };
+            }
+            if (remote.confirmCode) stands[id].confirmCode = remote.confirmCode;
+            changed = true;
+          }
+        });
+        if (changed) render();
+        setSyncStatus('ok');
+      }
+    })
+    .catch(() => setSyncStatus('error'));
+}
+
+// Guardar un stand en Sheets
+function saveToSheet(id) {
+  const s = stands[id];
+  const payload = {
+    action: 'update',
+    id,
+    status: s.status,
+    afiliado_cod: s.afiliado?.cod || '',
+    afiliado_nom: s.afiliado?.nom || '',
+    afiliado_com: s.afiliado?.com || '',
+    precio: getPrice(s),
+    confirmCode: s.confirmCode || '',
+    fecha: s.confirmDate || '',
+  };
+  return fetch(GS_URL, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  .then(r => r.json())
+  .then(data => {
+    setSyncStatus('ok');
+    return data;
+  })
+  .catch(() => {
+    setSyncStatus('error');
+  });
+}
+
+// Guardar múltiples stands (para acciones admin bulk)
+function bulkSaveToSheet(ids) {
+  const updates = ids.map(id => ({
+    id,
+    status: stands[id].status,
+    afiliado_cod: stands[id].afiliado?.cod || '',
+    afiliado_nom: stands[id].afiliado?.nom || '',
+    afiliado_com: stands[id].afiliado?.com || '',
+    precio: getPrice(stands[id]),
+    confirmCode: stands[id].confirmCode || '',
+    fecha: stands[id].confirmDate || '',
+  }));
+  return fetch(GS_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'bulkUpdate', updates }),
+  })
+  .then(r => r.json())
+  .catch(() => setSyncStatus('error'));
+}
+
+// ── Parchar doConfirm para guardar en Sheets ──
+const _origDoConfirm = doConfirm;
+doConfirm = function(id) {
+  _origDoConfirm(id);
+  // Dar tiempo a que se actualice stands[id] antes de guardar
+  setTimeout(() => saveToSheet(id), 200);
+};
+
+// ── Parchar onStandClick (admin block/unblock) para guardar en Sheets ──
+const _origOnStandClick = onStandClick;
+onStandClick = function(id) {
+  const prevStatus = stands[id]?.status;
+  _origOnStandClick(id);
+  // Si admin cambió el estado, sincronizar
+  if (adminMode && stands[id]?.status !== prevStatus) {
+    saveToSheet(id);
+  }
+};
+
+// ── Parchar adminAction para bulk save ──
+const _origAdminAction = adminAction;
+adminAction = function(action) {
+  const before = {};
+  Object.keys(stands).forEach(id => { before[id] = stands[id].status; });
+  _origAdminAction(action);
+  const changed = Object.keys(stands).filter(id => stands[id].status !== before[id]);
+  if (changed.length > 0) bulkSaveToSheet(changed);
+};
+
+// ══════════════════════════════════════════════════
 // START
 // ══════════════════════════════════════════════════
 init();
-render();
+
+// Agregar indicador de sync al header
+const headerRight = document.querySelector('.header-right');
+if (headerRight) {
+  const syncEl = document.createElement('span');
+  syncEl.id = 'sync-status';
+  syncEl.style.cssText = 'font-size:11px;font-family:system-ui,sans-serif;';
+  syncEl.innerHTML = '<span style="color:#888">● Conectando...</span>';
+  headerRight.prepend(syncEl);
+}
+
+// Cargar estado inicial desde Sheets, luego render
+setSyncStatus('syncing');
+fetch(`${GS_URL}?action=getAll`)
+  .then(r => r.json())
+  .then(data => {
+    if (data.success && data.stands) {
+      Object.entries(data.stands).forEach(([id, remote]) => {
+        if (stands[id]) {
+          stands[id].status = remote.status;
+          if (remote.afiliado_cod) {
+            stands[id].afiliado = {
+              cod: remote.afiliado_cod,
+              nom: remote.afiliado_nom,
+              com: remote.afiliado_com,
+            };
+          }
+          if (remote.confirmCode) stands[id].confirmCode = remote.confirmCode;
+        }
+      });
+    }
+    setSyncStatus('ok');
+    render();
+  })
+  .catch(() => {
+    setSyncStatus('error');
+    render(); // Igual renderizar aunque falle
+  });
+
+// Sincronizar cada 12 segundos
+syncInterval = setInterval(syncFromSheet, 12000);
 </script>
 </body>
 </html>
