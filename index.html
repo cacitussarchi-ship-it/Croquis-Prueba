@@ -479,19 +479,46 @@ function renderStats(){
 }
 
 // ══════════════════════════════════════════════════
+// GROUP HELPERS
+// ══════════════════════════════════════════════════
+
+// Retorna todos los IDs del mismo bloque (grande o mediano)
+// Para individuales y galpón 2, retorna solo el mismo ID
+function getGroupIds(id) {
+  const s = stands[id];
+  if (s.tipo === 'grande' || s.tipo === 'mediano') {
+    return Object.keys(stands).filter(k => stands[k].grupo === s.grupo);
+  }
+  return [id];
+}
+
+// Verifica si algún stand del grupo ya está vendido o reservado por otro
+function isGroupBlocked(id) {
+  const ids = getGroupIds(id);
+  return ids.some(k => {
+    const st = stands[k].status;
+    return st === 'sold' || st === 'blocked' || (st === 'reserved' && k !== selected);
+  });
+}
+
+// ══════════════════════════════════════════════════
 // STAND CLICK
 // ══════════════════════════════════════════════════
 function onStandClick(id){
   const s=stands[id];
   if(adminMode){
-    // Admin toggles blocked/available
+    // Admin: bloquear/desbloquear todo el grupo
     if(s.status==='sold'||s.status==='reserved') return;
-    stands[id].status = s.status==='blocked' ? 'available' : 'blocked';
+    const newStatus = s.status==='blocked' ? 'available' : 'blocked';
+    getGroupIds(id).forEach(k => {
+      if(stands[k].status !== 'sold' && stands[k].status !== 'reserved')
+        stands[k].status = newStatus;
+    });
     render();
     return;
   }
   if(s.status==='sold'||s.status==='blocked') return;
-  if(s.status==='reserved'&&id!==selected) return;
+  if(isGroupBlocked(id)) return;
   selected=id;
   render();
   showModal(id);
@@ -502,24 +529,36 @@ function onStandClick(id){
 // ══════════════════════════════════════════════════
 function showModal(id){
   const s=stands[id];
+  const groupIds=getGroupIds(id);
+  const isBlock = groupIds.length > 1;
   const price=getPrice(s);
   const sched=paySchedule(price);
+
+  // Reservar todos los stands del grupo
   if(s.status==='available'){
-    stands[id].status='reserved';
-    stands[id].reservedAt=Date.now();
+    const now=Date.now();
+    groupIds.forEach(k=>{
+      stands[k].status='reserved';
+      stands[k].reservedAt=now;
+    });
     render();
   }
+
+  const blockLabel = isBlock
+    ? `${s.grupo} · ${groupIds.length} stands (${groupIds.join(', ')})`
+    : `${s.size} · ${s.cat} · ${s.grupo}`;
+
   document.getElementById('modal-root').innerHTML=`
   <div class="overlay" id="ov">
    <div class="modal">
     <div class="modal-head" style="background:#c0622a">
-      <h2>Stand ${id}</h2>
-      <div class="sub">${s.size} · ${s.cat} · ${s.grupo}</div>
+      <h2>${isBlock ? s.grupo : 'Stand ' + id}</h2>
+      <div class="sub">${blockLabel}</div>
     </div>
     <div class="modal-body">
       <div id="ta"></div>
       <div class="price-tag">
-        <div><div class="pl">Precio del espacio</div></div>
+        <div><div class="pl">${isBlock ? `Precio del bloque (${groupIds.length} stands)` : 'Precio del espacio'}</div></div>
         <div class="pv">${formatCRC(price)}</div>
       </div>
       <label>Código de afiliado</label>
@@ -550,7 +589,11 @@ function startTimer(id){
     if(ms>0){
       ta.innerHTML=`<div class="timer-pill"><div class="tdot"></div>Espacio reservado por ${m}:${s2.toString().padStart(2,'0')}</div>`;
     } else {
-      stands[id].status='available'; delete stands[id].reservedAt;
+      // Liberar todo el grupo
+      getGroupIds(id).forEach(k=>{
+        stands[k].status='available';
+        delete stands[k].reservedAt;
+      });
       closeModal(); render();
     }
   };
@@ -563,17 +606,29 @@ function doConfirm(id){
   const com=document.getElementById('fm').value.trim();
   if(!cod||!nom||!com){alert('Por favor complete todos los campos.');return;}
   clearInterval(timerInterval);
-  stands[id].status='sold';
-  stands[id].afiliado={cod,nom,com};
-  delete stands[id].reservedAt;
-  const code='FM26-'+Math.random().toString(36).substring(2,8).toUpperCase();
-  stands[id].confirmCode=code;
-  stands[id].confirmDate=new Date().toLocaleDateString('es-CR',{day:'2-digit',month:'long',year:'numeric'});
-  document.getElementById('bok').disabled=true;
 
+  const groupIds=getGroupIds(id);
+  const isBlock=groupIds.length>1;
   const s=stands[id];
   const price=getPrice(s);
   const sched=paySchedule(price);
+  const code='FM26-'+Math.random().toString(36).substring(2,8).toUpperCase();
+  const fecha=new Date().toLocaleDateString('es-CR',{day:'2-digit',month:'long',year:'numeric'});
+
+  // Marcar todos los stands del grupo como vendidos
+  groupIds.forEach(k=>{
+    stands[k].status='sold';
+    stands[k].afiliado={cod,nom,com};
+    stands[k].confirmCode=code;
+    stands[k].confirmDate=fecha;
+    delete stands[k].reservedAt;
+  });
+
+  document.getElementById('bok').disabled=true;
+
+  const standLabel = isBlock
+    ? `${s.grupo} · ${groupIds.length} stands (${groupIds.join(', ')})`
+    : `${id} · ${s.grupo}`;
 
   document.getElementById('cr').innerHTML=`
     <div class="confirm">
@@ -581,7 +636,7 @@ function doConfirm(id){
       <div class="conf-code">${code}</div>
       <div class="conf-row"><span>Afiliado</span><span>${nom}</span></div>
       <div class="conf-row"><span>Comercio</span><span>${com}</span></div>
-      <div class="conf-row"><span>Stand</span><span>${id} · ${s.grupo}</span></div>
+      <div class="conf-row"><span>Stand</span><span>${standLabel}</span></div>
       <div class="conf-row"><span>Total</span><span>${formatCRC(price)}</span></div>
       <div class="pay-schedule">
         ${sched.map(p=>`
@@ -603,9 +658,14 @@ function doConfirm(id){
 
 function closeModal(){
   clearInterval(timerInterval);
-  if(selected&&stands[selected]?.status==='reserved'){
-    stands[selected].status='available';
-    delete stands[selected].reservedAt;
+  // Liberar todo el grupo si estaba reservado
+  if(selected){
+    getGroupIds(selected).forEach(k=>{
+      if(stands[k]?.status==='reserved'){
+        stands[k].status='available';
+        delete stands[k].reservedAt;
+      }
+    });
   }
   selected=null;
   document.getElementById('modal-root').innerHTML='';
@@ -943,22 +1003,30 @@ function bulkSaveToSheet(ids) {
   .catch(() => setSyncStatus('error'));
 }
 
-// ── Parchar doConfirm para guardar en Sheets ──
+// ── Parchar doConfirm para guardar todos los stands del grupo en Sheets ──
 const _origDoConfirm = doConfirm;
 doConfirm = function(id) {
   _origDoConfirm(id);
-  // Dar tiempo a que se actualice stands[id] antes de guardar
-  setTimeout(() => saveToSheet(id), 200);
+  // Dar tiempo a que se actualice stands antes de guardar
+  setTimeout(() => {
+    const groupIds = getGroupIds(id);
+    if (groupIds.length > 1) {
+      bulkSaveToSheet(groupIds);
+    } else {
+      saveToSheet(id);
+    }
+  }, 200);
 };
 
-// ── Parchar onStandClick (admin block/unblock) para guardar en Sheets ──
+// ── Parchar onStandClick (admin block/unblock) para guardar grupo en Sheets ──
 const _origOnStandClick = onStandClick;
 onStandClick = function(id) {
-  const prevStatus = stands[id]?.status;
+  const prevStatuses = {};
+  getGroupIds(id).forEach(k => { prevStatuses[k] = stands[k]?.status; });
   _origOnStandClick(id);
-  // Si admin cambió el estado, sincronizar
-  if (adminMode && stands[id]?.status !== prevStatus) {
-    saveToSheet(id);
+  if (adminMode) {
+    const changed = getGroupIds(id).filter(k => stands[k]?.status !== prevStatuses[k]);
+    if (changed.length > 0) bulkSaveToSheet(changed);
   }
 };
 
